@@ -140,9 +140,28 @@
     return (a === b ? a : a + '~' + b) + (/^[A-Za-z]/.test(label) ? ' ' : '') + label;
   }
 
+  // ---------- 월 단위 보기 ----------
+  // 월은 'YYYY-MM' 문자열로 다룬다. (monthKey 와 같은 모양)
+  function monthOf(s) { return typeof s === 'string' ? s.slice(0, 7) : ''; }
+  function yearOfKey(k) { return Number(k.slice(0, 4)); }
+  function monthOfKey(k) { return Number(k.slice(5, 7)); }
+
+  // 해당 달에 기록이 없을 때: 설명과, 기록이 있는 가장 가까운 최근 달로 가는 버튼
+  function emptyCard(title, text, jumpKey, jumpLabel, onJump) {
+    var sec = h('section', 'section nodata');
+    add(sec, h('h2', '', title), h('p', '', text));
+    if (jumpKey) {
+      var b = h('button', 'btn jump', jumpLabel + ' · ' + monthOfKey(jumpKey) + '월');
+      b.type = 'button';
+      b.addEventListener('click', function () { onJump(jumpKey); });
+      sec.appendChild(b);
+    }
+    return sec;
+  }
+
   // ---------- 화면 조각 ----------
-  // 위쪽에 고정되는 청록 머리띠. 어느 탭에서나 로고와 학생 이름이 보인다.
-  function renderTop(data) {
+  // 위쪽에 고정되는 청록 머리띠. 어느 탭에서나 로고와 학생 이름이 보이고, 그 아래에 월 선택줄이 붙는다.
+  function renderTop(data, mbar) {
     var name = (data.student && data.student.name) || '';
     var grade = data.student && data.student.grade;
 
@@ -159,12 +178,11 @@
 
     return add(h('header', 'top'),
       h('h1', 'sr', name + ' 학생의 학습 평가서'),
-      add(h('div', 'brand'), logo, title),
-      who);
+      add(h('div', 'toprow'), add(h('div', 'brand'), logo, title), who),
+      mbar);
   }
 
-  function renderLatest(data) {
-    var l = (data.lessons || [])[0];
+  function renderLatest(data, l) {
     if (!l) return null;
     var sec = h('section', 'section');
     var d = parseDate(l.date);
@@ -329,7 +347,7 @@
   function renderProgress(list) {
     if (!list || !list.length) return null;
     var sec = h('section', 'section');
-    sec.appendChild(h('h2', '', '교재 진도'));
+    sec.appendChild(add(h('h2', '', '교재 진도'), h('span', 'hint', '현재 기준')));
     list.forEach(function (p) {
       var cur = Number(p.current_unit);
       var tot = Number(p.total_units);
@@ -364,11 +382,15 @@
     return sec;
   }
 
-  function renderTests(list) {
+  // 선택한 달에 본 시험만 보여 준다. 시험 기록이 아예 없으면 카드를 만들지 않는다.
+  function renderTests(list, sel) {
     if (!list || !list.length) return null;
+    var mo = monthOfKey(sel);
+    var shown = list.filter(function (t) { return monthOf(t.date) === sel; });
     var sec = h('section', 'section');
-    sec.appendChild(h('h2', '', '시험 결과'));
-    list.forEach(function (t) {
+    sec.appendChild(add(h('h2', '', mo + '월 시험 결과'), shown.length ? h('span', 'hint', shown.length + '회') : null));
+    if (!shown.length) sec.appendChild(h('p', 'empty', mo + '월에는 본 시험이 없어요.'));
+    shown.forEach(function (t) {
       var w = h('div', 'test');
       var line = h('div', 'line');
       var left = h('div');
@@ -391,7 +413,8 @@
 
   // 시험 점수 추이: 종류·단위·만점이 같은 시험을 2번 이상 봤을 때 꺾은선으로 보여 준다.
   // 세로 눈금은 실제 점수로 적고, 점수가 몰려 있으면 아래쪽을 잘라서 변화가 보이게 한다.
-  function trendChart(g) {
+  // 추이는 전체 기록을 보여 주고, 선택한 달의 점수만 크게 강조한다.
+  function trendChart(g, sel) {
     var pts = g.pts.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).slice(-8);
     var n = pts.length;
     var W = 320, H = 156, L = 34, R = 16, T = 24, B = 26;
@@ -427,16 +450,19 @@
     s.appendChild(svgEl('path', { d: line + 'L' + X(n - 1).toFixed(1) + ' ' + (T + plotH) + 'L' + X(0).toFixed(1) + ' ' + (T + plotH) + 'z', 'class': 'tr-area' }));
     s.appendChild(svgEl('path', { d: line, 'class': 'tr-line' }));
 
+    var anySel = pts.some(function (p) { return monthOf(p.date) === sel; });
     pts.forEach(function (p, i) {
       var last = i === n - 1;
-      s.appendChild(svgEl('circle', { cx: X(i), cy: Y(p.score), r: last ? 5 : 3.5, 'class': 'tr-dot' }));
-      if (n <= 6 || i === 0 || last) {
-        var v = svgEl('text', { x: X(i), y: Y(p.score) - 9, 'text-anchor': 'middle', 'class': 'tr-val' });
+      var on = monthOf(p.date) === sel;
+      s.appendChild(svgEl('circle', { cx: X(i), cy: Y(p.score), r: on ? 5 : 3.2, 'class': 'tr-dot' }));
+      if (on) s.appendChild(svgEl('circle', { cx: X(i), cy: Y(p.score), r: 9, 'class': 'tr-ring' }));
+      if (on || (!anySel && last)) {
+        var v = svgEl('text', { x: X(i), y: Y(p.score) - (on ? 14 : 9), 'text-anchor': 'middle', 'class': 'tr-val' });
         v.textContent = num(p.score);
         s.appendChild(v);
       }
       if (n <= 5 || i === 0 || last || (i % 2 === 0 && i < n - 2)) {
-        var x = svgEl('text', { x: X(i), y: H - 8, 'text-anchor': 'middle', 'class': 'tr-axis' });
+        var x = svgEl('text', { x: X(i), y: H - 8, 'text-anchor': 'middle', 'class': 'tr-axis' + (on ? ' sel' : '') });
         x.textContent = md(p.date);
         s.appendChild(x);
       }
@@ -452,7 +478,7 @@
     return add(wrap, head, s);
   }
 
-  function renderTrend(list) {
+  function renderTrend(list, sel) {
     if (!list || !list.length) return null;
     var groups = {};
     list.forEach(function (t) {
@@ -469,8 +495,8 @@
       .filter(function (g) { return g.pts.length >= 2; });
     if (!charts.length) return null;
     var sec = h('section', 'section');
-    sec.appendChild(h('h2', '', '점수 추이'));
-    charts.forEach(function (g) { sec.appendChild(trendChart(g)); });
+    sec.appendChild(add(h('h2', '', '점수 추이'), h('span', 'hint', '전체 기록, 고른 달은 크게')));
+    charts.forEach(function (g) { sec.appendChild(trendChart(g, sel)); });
     return sec;
   }
 
@@ -522,29 +548,15 @@
     return item;
   }
 
-  function renderEvaluations(list) {
-    if (!list || !list.length) return null;
+  // 월 선택으로 고른 달의 평가 한 건
+  function renderEvaluation(e) {
     var sec = h('section', 'section');
-    sec.appendChild(h('h2', '', evalTitle(list[0])));
-    sec.appendChild(evalItem(list[0], true));
-    if (list.length > 1) {
-      var olds = h('div');
-      olds.hidden = true;
-      list.slice(1).forEach(function (e) { olds.appendChild(evalItem(e)); });
-      var btn = h('button', 'btn more', '이전 평가 보기');
-      btn.type = 'button';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.addEventListener('click', function () {
-        olds.hidden = !olds.hidden;
-        btn.setAttribute('aria-expanded', String(!olds.hidden));
-        btn.textContent = olds.hidden ? '이전 평가 보기' : '이전 평가 접기';
-      });
-      add(sec, btn, olds);
-    }
+    sec.appendChild(h('h2', '', evalTitle(e)));
+    sec.appendChild(evalItem(e, true));
     return sec;
   }
 
-  // 지난 수업: 한 줄 요약, 누르면 펼침 (처음 5개 + 더 보기)
+  // 지난 수업: 한 줄 요약, 누르면 펼침
   function pastItem(data, l) {
     var wrap = h('div', 'past');
     var btn = h('button');
@@ -587,26 +599,12 @@
     return wrap;
   }
 
-  function renderPast(data) {
-    var list = (data.lessons || []).slice(1);
+  // 선택한 달의 나머지 수업. 한 달 치라서 "더 보기" 없이 모두 보여 준다.
+  function renderPast(data, list, mo) {
     if (!list.length) return null;
     var sec = h('section', 'section');
-    sec.appendChild(h('h2', '', '지난 수업'));
-    var FIRST = 5;
-    list.slice(0, FIRST).forEach(function (l) { sec.appendChild(pastItem(data, l)); });
-    if (list.length > FIRST) {
-      var rest = h('div');
-      rest.hidden = true;
-      list.slice(FIRST).forEach(function (l) { rest.appendChild(pastItem(data, l)); });
-      var btn = h('button', 'btn more', '이전 수업 ' + (list.length - FIRST) + '개 더 보기');
-      btn.type = 'button';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.addEventListener('click', function () {
-        rest.hidden = false;
-        btn.hidden = true;
-      });
-      add(sec, rest, btn);
-    }
+    sec.appendChild(add(h('h2', '', '지난 수업'), h('span', 'hint', mo + '월 ' + list.length + '회')));
+    list.forEach(function (l) { sec.appendChild(pastItem(data, l)); });
     return sec;
   }
 
@@ -614,32 +612,50 @@
   // 아이콘은 24x24 안에 그린 선 아이콘.
   var TABS = [
     {
-      id: 'lesson', label: '수업',
+      id: 'lesson', label: '수업', monthly: true,
       icon: 'M3 5.5c3-1 6-.8 9 1v12.5c-3-1.8-6-2-9-1z M21 5.5c-3-1-6-.8-9 1v12.5c3-1.8 6-2 9-1z',
       empty: '수업 기록이 쌓이면 이곳에 표시됩니다.',
-      build: function (data) { return [renderLatest(data), renderPast(data)]; }
+      build: function (data, ctx) {
+        var mo = monthOfKey(ctx.sel);
+        var list = (data.lessons || []).filter(function (l) { return monthOf(l.date) === ctx.sel; });
+        if (!list.length) {
+          return [emptyCard(mo + '월에는 수업 기록이 없어요', '다른 달을 고르면 지난 수업을 볼 수 있어요.',
+            ctx.latest(ctx.lessonKeys), '가장 최근 수업 보기', ctx.setMonth)];
+        }
+        return [renderLatest(data, list[0]), renderPast(data, list.slice(1), mo)];
+      }
     },
     {
-      id: 'attend', label: '출석',
+      id: 'attend', label: '출석', monthly: false,
       icon: 'M5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-12A1.5 1.5 0 0 1 5.5 5z M4 9.5h16M8 3v4M16 3v4M9 14.5l2 2 4-4',
       empty: '출석 기록이 쌓이면 이곳에 표시됩니다.',
       build: function (data) { return [renderAttendance(data)]; }
     },
     {
-      id: 'progress', label: '진도·시험',
+      id: 'progress', label: '진도·시험', monthly: true,
       icon: 'M5 20v-8M12 20V5M19 20v-5',
       empty: '교재 진도와 시험 결과가 쌓이면 이곳에 표시됩니다.',
-      build: function (data) { return [renderProgress(data.progress), renderTrend(data.tests), renderTests(data.tests)]; }
+      build: function (data, ctx) {
+        return [renderProgress(data.progress), renderTrend(data.tests, ctx.sel), renderTests(data.tests, ctx.sel)];
+      }
     },
     {
-      id: 'eval', label: '평가',
+      id: 'eval', label: '평가', monthly: true,
       icon: 'M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z',
       empty: '월간 평가가 등록되면 이곳에 표시됩니다.',
-      build: function (data) { return [renderEvaluations(data.evaluations)]; }
+      build: function (data, ctx) {
+        var mo = monthOfKey(ctx.sel);
+        var e = (data.evaluations || []).filter(function (x) { return monthKey(x.year, x.month) === ctx.sel; })[0];
+        if (e) return [renderEvaluation(e)];
+        return [emptyCard(mo + '월 평가는 아직 없어요', '평가가 등록되면 이곳에 표시돼요.',
+          ctx.latest(ctx.evalKeys), '가장 최근 평가 보기', ctx.setMonth)];
+      }
     }
   ];
 
   var currentTab = TABS[0].id;
+  var selMonth = null;      // 월 선택줄에서 고른 달 ('YYYY-MM'). 처음에는 이번 달.
+  var onSheetKey = null;    // 월 선택 시트의 Esc 처리기 (다시 그릴 때 중복 등록을 막는다)
 
   function tabIcon(d) {
     var s = svg(24, 24, '0 0 24 24', 'ico');
@@ -647,9 +663,51 @@
     return s;
   }
 
+  function closeIcon() {
+    var s = svg(18, 18, '0 0 18 18', '');
+    s.appendChild(svgEl('path', { d: 'M4.5 4.5l9 9M13.5 4.5l-9 9' }));
+    return s;
+  }
+
+  function iconButton(cls, label, icon) {
+    var b = h('button', cls);
+    b.type = 'button';
+    b.setAttribute('aria-label', label);
+    b.appendChild(icon);
+    return b;
+  }
+
   function render(data) {
     root.textContent = '';
     root.removeAttribute('aria-live');
+    if (onSheetKey) document.removeEventListener('keydown', onSheetKey);
+
+    // ----- 기록이 있는 달 목록 -----
+    var now = new Date();
+    var curKey = monthKey(now.getFullYear(), now.getMonth() + 1);
+    var lessonKeys = {};
+    var evalKeys = {};
+    var hasKey = {};
+    hasKey[curKey] = true;
+    (data.lessons || []).forEach(function (l) { var k = monthOf(l.date); if (k) { hasKey[k] = true; lessonKeys[k] = true; } });
+    (data.tests || []).forEach(function (t) { var k = monthOf(t.date); if (k) hasKey[k] = true; });
+    (data.evaluations || []).forEach(function (e) { var k = monthKey(e.year, e.month); hasKey[k] = true; evalKeys[k] = true; });
+    var keys = Object.keys(hasKey).filter(function (k) { return /^\d{4}-\d{2}$/.test(k) && k <= curKey; }).sort();
+    if (!selMonth || !hasKey[selMonth] || selMonth > curKey) selMonth = curKey;
+
+    // 기록이 있는 가장 최근 달 (지금 보는 달 제외). 기록이 없는 달의 안내 버튼에 쓴다.
+    function latest(set) {
+      var ks = Object.keys(set).filter(function (k) { return k !== selMonth && k <= curKey; }).sort().reverse();
+      return ks[0] || null;
+    }
+
+    var ctx = {
+      get sel() { return selMonth; },
+      lessonKeys: lessonKeys,
+      evalKeys: evalKeys,
+      latest: latest,
+      setMonth: function (k) { setMonth(k); }
+    };
 
     var panel = h('div', 'panel');
     panel.id = 'panel';
@@ -659,6 +717,9 @@
     var bar = h('nav', 'tabbar');
     bar.setAttribute('role', 'tablist');
     bar.setAttribute('aria-label', '학습 평가서 구역');
+
+    var mbar = h('div', 'mbar');
+    var topEl = renderTop(data, mbar);
 
     var buttons = TABS.map(function (t) {
       var b = h('button', 'tab');
@@ -672,11 +733,149 @@
       return b;
     });
 
+    // ----- 월 선택줄 -----
+    function setMonth(k) {
+      selMonth = k;
+      show(currentTab, true);
+    }
+
+    function drawBar() {
+      var tab = TABS.filter(function (t) { return t.id === currentTab; })[0];
+      mbar.hidden = !tab.monthly;
+      if (!tab.monthly) return;
+      mbar.textContent = '';
+      var i = keys.indexOf(selMonth);
+      var label = yearOfKey(selMonth) + '년 ' + monthOfKey(selMonth) + '월';
+
+      var prev = iconButton('mb', '이전 기록이 있는 달', chevron('', 'l'));
+      prev.disabled = i <= 0;
+      prev.addEventListener('click', function () { setMonth(keys[i - 1]); });
+
+      var next = iconButton('mb', '다음 기록이 있는 달', chevron('', 'r'));
+      next.disabled = i >= keys.length - 1;
+      next.addEventListener('click', function () { setMonth(keys[i + 1]); });
+
+      var pick = h('button', 'mlabel');
+      pick.type = 'button';
+      pick.setAttribute('aria-haspopup', 'dialog');
+      pick.setAttribute('aria-label', '월 선택, 지금 ' + label);
+      add(pick, h('span', '', label), chevron('', 'd'));
+      pick.addEventListener('click', openSheet);
+
+      var tag;
+      if (selMonth === curKey) {
+        tag = h('span', 'mchip', '이번 달');
+      } else {
+        tag = h('button', 'mback', '이번 달로');
+        tag.type = 'button';
+        tag.addEventListener('click', function () { setMonth(curKey); });
+      }
+      add(mbar, prev, pick, tag, next);
+    }
+
+    // ----- 월 선택 시트 -----
+    var layer = h('div', 'layer');
+    layer.hidden = true;
+    var scrim = h('div', 'scrim');
+    var sheet = h('div', 'sheet');
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.setAttribute('aria-labelledby', 'sheet-title');
+    add(layer, scrim, sheet);
+    scrim.addEventListener('click', closeSheet);
+
+    var pickYear = yearOfKey(curKey);
+
+    function buildSheet() {
+      sheet.textContent = '';
+      var minY = yearOfKey(keys[0]);
+      var maxY = yearOfKey(curKey);
+
+      var title = h('h2', '', '월 선택');
+      title.id = 'sheet-title';
+      var close = iconButton('btn navbtn', '닫기', closeIcon());
+      close.addEventListener('click', closeSheet);
+
+      var prevY = iconButton('btn navbtn', '이전 해', chevron('', 'l'));
+      prevY.disabled = pickYear <= minY;
+      prevY.addEventListener('click', function () { pickYear--; buildSheet(); focusIn(YEAR_BTNS); });
+      var nextY = iconButton('btn navbtn', '다음 해', chevron('', 'r'));
+      nextY.disabled = pickYear >= maxY;
+      nextY.addEventListener('click', function () { pickYear++; buildSheet(); focusIn(YEAR_BTNS); });
+
+      var grid = h('div', 'mg');
+      for (var m = 1; m <= 12; m++) {
+        (function (m) {
+          var k = monthKey(pickYear, m);
+          var has = !!hasKey[k];
+          var off = !has || k > curKey;
+          var b = h('button', 'mc' + (k === selMonth ? ' on' : '') + (k === curKey ? ' now' : ''));
+          b.type = 'button';
+          b.disabled = off;
+          if (k === curKey) b.setAttribute('aria-current', 'date');
+          b.appendChild(document.createTextNode(m + '월'));
+          if (!off) b.appendChild(h('i', 'dot'));
+          b.appendChild(h('span', 'sr', off ? '기록 없음' : '기록 있음'));
+          b.addEventListener('click', function () { closeSheet(); setMonth(k); });
+          grid.appendChild(b);
+        })(m);
+      }
+
+      add(sheet,
+        h('div', 'grab'),
+        add(h('div', 'sh-head'), title, close),
+        add(h('div', 'yr'), prevY, h('b', '', pickYear + '년'), nextY),
+        grid,
+        h('p', 'sh-note', '기록이 있는 달만 고를 수 있어요. 책갈피는 이번 달이에요.'));
+
+      if (selMonth !== curKey) {
+        var back = h('button', 'btn jump', '이번 달 보기 · ' + monthOfKey(curKey) + '월');
+        back.type = 'button';
+        back.addEventListener('click', function () { closeSheet(); setMonth(curKey); });
+        sheet.appendChild(back);
+      }
+    }
+
+    // 연도를 옮긴 뒤에도 포커스가 시트 안에 남도록, 아직 누를 수 있는 연도 버튼으로 옮긴다.
+    var YEAR_BTNS = '[aria-label="이전 해"]:not(:disabled), [aria-label="다음 해"]:not(:disabled)';
+
+    function focusIn(selector) {
+      var el = sheet.querySelector(selector);
+      if (el) el.focus();
+    }
+
+    function setBackground(inert) {
+      [topEl, panel, bar].forEach(function (el) { el.inert = inert; });
+      document.documentElement.classList.toggle('lock', inert);
+    }
+
+    function openSheet() {
+      pickYear = yearOfKey(selMonth);
+      buildSheet();
+      layer.hidden = false;
+      setBackground(true);
+      void layer.offsetWidth;
+      layer.classList.add('open');
+      focusIn('.mc.on, .navbtn');
+    }
+
+    function closeSheet() {
+      if (layer.hidden) return;
+      layer.classList.remove('open');
+      setBackground(false);
+      setTimeout(function () { if (!layer.classList.contains('open')) layer.hidden = true; }, 240);
+      var opener = mbar.querySelector('.mlabel');
+      if (opener) opener.focus();
+    }
+
+    onSheetKey = function (e) { if (e.key === 'Escape') closeSheet(); };
+    document.addEventListener('keydown', onSheetKey);
+
     function show(id, toTop) {
       currentTab = id;
       var tab = TABS.filter(function (t) { return t.id === id; })[0];
       panel.textContent = '';
-      var sections = tab.build(data).filter(Boolean);
+      var sections = tab.build(data, ctx).filter(Boolean);
       if (sections.length) {
         sections.forEach(function (s) { panel.appendChild(add(h('div', 'card'), s)); });
       } else {
@@ -694,6 +893,7 @@
         b.setAttribute('aria-selected', String(on));
         b.tabIndex = on ? 0 : -1;
       });
+      drawBar();
       if (toTop) window.scrollTo(0, 0);
     }
 
@@ -706,7 +906,7 @@
       buttons[next].focus();
     });
 
-    add(root, renderTop(data), panel, bar);
+    add(root, topEl, panel, bar, layer);
     show(currentTab, false);
   }
 
