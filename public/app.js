@@ -80,29 +80,108 @@
     return hero;
   }
 
-  function renderSummary(data) {
-    var summary = data.month_summary || {};
-    var makeups = data.makeups || [];
-    var keys = ['출석', '지각', '결석', '보강'].filter(function (k) { return summary[k]; });
-    if (!keys.length && !makeups.length) return null;
+  function monthKey(year, month) {
+    return year + '-' + (month < 10 ? '0' : '') + month;
+  }
 
-    var month = new Date().getMonth() + 1;
-    var c = card(month + '월 출결');
-    if (keys.length) {
-      var chips = h('div', 'chips');
-      keys.forEach(function (k) {
-        var chip = h('span', 'chip');
-        add(chip, document.createTextNode(k + ' '), h('b', '', summary[k] + '회'));
-        chips.appendChild(chip);
-      });
-      c.appendChild(chips);
-    }
-    makeups.forEach(function (m) {
-      var when = fmtDate(m.date);
-      var t = fmtTime(m.start);
-      if (t) when += ' ' + t + (fmtTime(m.end) ? ' ~ ' + fmtTime(m.end) : '');
-      c.appendChild(h('p', 'note', '예정된 보강  ' + when));
+  // 월 이동이 되는 출결 카드: 선택한 달의 횟수 요약 + 날짜별 출결 목록
+  function renderAttendance(data) {
+    var log = data.attendance || [];
+    var makeups = data.makeups || [];
+    if (!log.length && !makeups.length) return null;
+
+    var now = new Date();
+    var nowIdx = now.getFullYear() * 12 + now.getMonth();
+
+    // 월별로 묶고, 가장 이른 달부터 이번 달까지 이동 가능한 월 목록을 만든다.
+    var byMonth = {};
+    var startIdx = nowIdx;
+    log.forEach(function (r) {
+      var d = parseDate(r.date);
+      if (!d) return;
+      var key = monthKey(d.getFullYear(), d.getMonth() + 1);
+      (byMonth[key] = byMonth[key] || []).push({ date: r.date, attendance: r.attendance });
+      startIdx = Math.min(startIdx, d.getFullYear() * 12 + d.getMonth());
     });
+
+    var months = [];
+    for (var idx = startIdx; idx <= nowIdx; idx++) {
+      var y = Math.floor(idx / 12);
+      var m = (idx % 12) + 1;
+      months.push({ key: monthKey(y, m), year: y, month: m });
+    }
+    var pos = months.length - 1;
+
+    var c = h('section', 'card');
+    var head = h('div', 'cardhead');
+    var title = h('h2');
+    var nav = h('div', 'nav');
+    var prev = h('button', 'navbtn', '‹');
+    var next = h('button', 'navbtn', '›');
+    prev.type = 'button';
+    next.type = 'button';
+    prev.setAttribute('aria-label', '이전 달');
+    next.setAttribute('aria-label', '다음 달');
+    add(nav, prev, next);
+    add(head, title);
+    if (months.length > 1) head.appendChild(nav);
+    c.appendChild(head);
+    var body = h('div', 'attbody');
+    c.appendChild(body);
+
+    function draw() {
+      var cur = months[pos];
+      title.textContent = (cur.year !== now.getFullYear() ? cur.year + '년 ' : '') + cur.month + '월 출결';
+      prev.disabled = pos === 0;
+      next.disabled = pos === months.length - 1;
+      body.textContent = '';
+
+      var rows = (byMonth[cur.key] || []).slice().sort(function (a, b) {
+        return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+      });
+
+      var counts = {};
+      rows.forEach(function (r) { counts[r.attendance] = (counts[r.attendance] || 0) + 1; });
+      var keys = ['출석', '지각', '결석', '보강'].filter(function (k) { return counts[k]; });
+
+      if (keys.length) {
+        var chips = h('div', 'chips');
+        keys.forEach(function (k) {
+          var chip = h('span', 'chip');
+          add(chip, document.createTextNode(k + ' '), h('b', '', counts[k] + '회'));
+          chips.appendChild(chip);
+        });
+        body.appendChild(chips);
+      }
+
+      if (rows.length) {
+        var list = h('div', 'daylist');
+        rows.forEach(function (r) {
+          var row = h('div', 'dayrow');
+          add(row,
+            h('span', 'daydate', fmtDate(r.date)),
+            h('span', 'badge ' + (ATTENDANCE_TONE[r.attendance] || 'mute'), r.attendance));
+          list.appendChild(row);
+        });
+        body.appendChild(list);
+      } else {
+        body.appendChild(h('p', 'empty', '이 달에는 수업 기록이 없어요.'));
+      }
+
+      // 예정된 보강은 이번 달을 볼 때만 보여준다.
+      if (pos === months.length - 1) {
+        makeups.forEach(function (mk) {
+          var when = fmtDate(mk.date);
+          var t = fmtTime(mk.start);
+          if (t) when += ' ' + t + (fmtTime(mk.end) ? ' ~ ' + fmtTime(mk.end) : '');
+          body.appendChild(h('p', 'note', '예정된 보강  ' + when));
+        });
+      }
+    }
+
+    prev.addEventListener('click', function () { if (pos > 0) { pos--; draw(); } });
+    next.addEventListener('click', function () { if (pos < months.length - 1) { pos++; draw(); } });
+    draw();
     return c;
   }
 
@@ -247,7 +326,7 @@
     root.textContent = '';
     add(root,
       renderHero(data),
-      renderSummary(data),
+      renderAttendance(data),
       renderProgress(data.progress),
       renderLessons(data.lessons),
       renderTests(data.tests),

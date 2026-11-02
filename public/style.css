@@ -300,6 +300,48 @@ details[open] > summary::after { content: " ▴"; }
   font-weight: 700;
 }
 
+/* ---------- 월별 출결 ---------- */
+.cardhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cardhead > h2 { margin: 0; font-size: 1.05rem; letter-spacing: -0.01em; }
+
+.nav { display: flex; gap: 8px; }
+
+.navbtn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  font: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.navbtn:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
+
+.daylist { margin-top: 12px; }
+
+.dayrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.daydate { font-weight: 600; }
+
+.empty { margin: 4px 0 0; color: var(--muted); font-size: 0.92rem; }
+
 /* ---------- 푸터 ---------- */
 .foot {
   margin: 24px 4px 0;
