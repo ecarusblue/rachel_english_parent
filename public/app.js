@@ -152,13 +152,13 @@
     logo.width = 38;
     logo.height = 38;
     var title = h('div');
-    add(title, h('b', '', 'Rachel English'), h('small', '', '학습 현황'));
+    add(title, h('b', '', 'Rachel English'), h('small', '', '학습 평가서'));
 
     var who = h('p', 'who');
     add(who, h('b', '', name + ' 학생'), has(grade) ? h('small', '', grade) : null);
 
     return add(h('header', 'top'),
-      h('h1', 'sr', name + ' 학생의 학습 현황'),
+      h('h1', 'sr', name + ' 학생의 학습 평가서'),
       add(h('div', 'brand'), logo, title),
       who);
   }
@@ -573,7 +573,7 @@
 
     var bar = h('nav', 'tabbar');
     bar.setAttribute('role', 'tablist');
-    bar.setAttribute('aria-label', '학습 현황 구역');
+    bar.setAttribute('aria-label', '학습 평가서 구역');
 
     var buttons = TABS.map(function (t) {
       var b = h('button', 'tab');
@@ -650,7 +650,7 @@
   function load() {
     var token = readToken();
     if (!token) {
-      showMessage('링크를 확인해 주세요', '올바른 학습 현황 링크가 아니에요. 선생님께 링크를 다시 요청해 주세요.');
+      showMessage('링크를 확인해 주세요', '올바른 학습 평가서 링크가 아니에요. 선생님께 링크를 다시 요청해 주세요.');
       return;
     }
 
