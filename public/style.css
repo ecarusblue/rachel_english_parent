@@ -1,65 +1,78 @@
-/* 학부모 학습 현황 — "알림장" 스타일: 줄 노트, 출석부 기호, 도장판, 형광펜 */
+/* 학부모 학습 현황 — Rachel English 선생님 앱(rachel_english)과 같은 청록 디자인.
+   색상·반경·배지·막대는 그 앱의 style.css 값을 그대로 쓴다. 폰트는 Pretendard Variable. */
 :root {
-  --paper: #eef1f6;
-  --sheet: #ffffff;
-  --ink: #1f2a4d;
-  --soft: #566089;
-  --rule: #d5dbe8;
-  --rule2: #7f8bae;
-  --stamp: #d9472f;
-  --stampx: #b5301c;
-  --tint: #fce4de;
-  --marker: #ffe58a;
-  --hand: "Gaegu", "Nanum Pen Script", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", cursive;
+  --bg: #e9f1f1;
+  --surface: #fbfdfd;
+  --text: #16282b;
+  --muted: #4f6568;
+  --border: #d3dfe0;
+  --accent: #18767d;
+  --accent-soft: #d9eeee;
+  --on-accent: #ffffff;
+  --progress: #5b6f72;
+  --panel: #f1f7f7;
+  --side-bg: #0f3d44;
+  --side-text: #e8f3f3;
+  --side-muted: #a8c8ca;
+  --good: #15803d;
+  --good-soft: #dff3e6;
+  --warn: #b45309;
+  --warn-soft: #fff4e0;
+  --bad: #b91c1c;
+  --bad-soft: #fdecec;
+  --mark: #f4a27a;
+  --radius: 10px;
+  --col: 560px;
+  /* 좁은 화면에서는 16px(또는 노치 안쪽), 넓은 화면에서는 560px 가운데 열의 가장자리 */
+  --padl: max(16px, env(safe-area-inset-left, 0px), calc((100vw - var(--col)) / 2 + 16px));
+  --padr: max(16px, env(safe-area-inset-right, 0px), calc((100vw - var(--col)) / 2 + 16px));
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0d1221;
-    --sheet: #151b2f;
-    --ink: #e7ebf8;
-    --soft: #a8b2d0;
-    --rule: #2a3352;
-    --rule2: #6f7ba0;
-    --stamp: #ff8168;
-    --stampx: #ff9c86;
-    --tint: #3b2430;
-    --marker: #5b4f12;
+    --bg: #0d1516;
+    --surface: #152123;
+    --text: #e5eeee;
+    --muted: #96b0b3;
+    --border: #25393c;
+    --accent: #5bc4cb;
+    --accent-soft: #16343a;
+    --on-accent: #062428;
+    --progress: #8fa8ab;
+    --panel: #112022;
+    --side-bg: #081012;
+    --side-text: #e5eeee;
+    --side-muted: #8ea9ac;
+    --good: #4ade80;
+    --good-soft: #1d3b2d;
+    --warn: #fbbf24;
+    --warn-soft: #3a2f17;
+    --bad: #f87171;
+    --bad-soft: #3a1d1f;
   }
 }
 
 * { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR",
-    "Malgun Gothic", "Segoe UI", sans-serif;
-  font-size: 16px;
-  line-height: 1.65;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
 
+h1, h2, h3, h4, p, dl, dd { margin: 0; }
+
 button { font: inherit; color: inherit; }
 
-:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
-
-.wrap {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 12px 10px calc(28px + env(safe-area-inset-bottom));
-}
-
-.sheet {
-  padding: 22px 20px 30px;
-  background: var(--sheet);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .sr {
   position: absolute;
@@ -70,406 +83,276 @@ button { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 
+.wrap { padding: 0; }
+
+.panel {
+  max-width: var(--col);
+  margin: 0 auto;
+  padding-block: 14px calc(62px + env(safe-area-inset-bottom, 0px) + 28px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 592px) {
+  .panel { padding-inline: 0; }
+}
+
+.panel > .card + .card { margin-top: 12px; }
+
+[hidden] { display: none !important; }
+
 /* ---------- 상태 ---------- */
 .status {
-  margin: 80px 0;
+  margin: 80px 16px;
   text-align: center;
-  color: var(--soft);
+  color: var(--muted);
 }
 
 .status strong {
   display: block;
   margin-bottom: 6px;
-  color: var(--ink);
+  color: var(--text);
   font-size: 1.15rem;
 }
 
+/* ---------- 버튼 · 배지 · 막대 ---------- */
 .btn {
-  min-height: 44px;
-  margin-top: 16px;
-  padding: 8px 22px;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
+  font: inherit;
+  border: 1px solid var(--border);
   background: transparent;
-  font-weight: 600;
+  color: var(--text);
+  padding: 0.5em 0.9em;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-/* ---------- 머리말 ---------- */
-.brand { margin: 0; font-size: 14px; font-weight: 600; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { min-height: 44px; margin-top: 16px; background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 
-.title {
-  margin: 14px 0 0;
-  font-size: 28px;
-  line-height: 1.3;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.grade { margin: 4px 0 0; font-size: 15px; color: var(--soft); }
-
-/* ---------- 구역 ---------- */
-.section { margin-top: 36px; }
-
-.section > h2,
-.cardhead > h2 {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.4;
-  font-weight: 700;
-}
-
-.section > h2 { margin-bottom: 6px; }
-
-/* ---------- 최근 수업 ---------- */
-.latest {
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 2px solid var(--ink);
-}
-
-.latest-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.latest-head h2 {
-  margin: 0;
-  font-size: 21px;
-  line-height: 1.35;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.hwline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0 0;
-  font-size: 14px;
+.badge {
+  display: inline-block;
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
   font-weight: 600;
-}
-
-.circled {
-  position: relative;
-  flex: none;
-  width: 64px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.circled svg { position: absolute; left: 0; top: 0; }
-.circled span { position: relative; }
-
-.what { margin: 12px 0 0; }
-.what b { font-weight: 600; }
-.what .range { margin-left: 8px; color: var(--soft); }
-.topic { margin: 0; font-size: 15px; color: var(--soft); }
-
-/* 줄 노트 */
-.ruled {
-  margin-top: 16px;
-  background-image: linear-gradient(to bottom, transparent 37px, var(--rule) 37px);
-  background-size: 100% 38px;
-  font-family: var(--hand);
-  font-size: 22px;
-  line-height: 38px;
-}
-
-.ruled p { margin: 0; white-space: pre-wrap; }
-
-.ruled.long {
-  font-family: inherit;
-  font-size: 16px;
-  line-height: 32px;
-  background-image: linear-gradient(to bottom, transparent 31px, var(--rule) 31px);
-  background-size: 100% 32px;
-}
-
-.ruled .sign {
-  text-align: right;
-  font-family: var(--hand);
-  font-size: 20px;
-  line-height: 38px;
-  color: var(--soft);
-}
-
-.ruled.long .sign { line-height: 32px; }
-
-/* 라벨 + 내용 행 */
-.rows { margin-top: 18px; }
-
-.row2 {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  gap: 12px;
-  padding: 13px 0;
-  border-top: 1px solid var(--rule);
-}
-
-.rows .row2:last-child { border-bottom: 1px solid var(--rule); }
-
-.row2 .k { font-size: 14px; font-weight: 600; color: var(--soft); }
-.row2 p { margin: 0; white-space: pre-wrap; }
-
-.mark {
-  background: linear-gradient(transparent 58%, var(--marker) 58%);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
-/* ---------- 출석부 달력 ---------- */
-.cardhead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav { display: flex; gap: 8px; }
-
-.navbtn {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.navbtn svg { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.navbtn:disabled { opacity: 0.35; cursor: default; }
-
-.cal-head,
-.cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.cal-head {
-  margin-top: 14px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--soft);
-}
-
-.cal-grid { margin-top: 4px; }
-
-.cell {
-  position: relative;
-  height: 52px;
-  border-radius: 6px;
-}
-
-.cell.has { border: 1px solid var(--rule); }
-.cell.today { border-color: var(--ink); border-width: 2px; }
-
-.cell .d {
-  position: absolute;
-  top: 3px;
-  left: 6px;
-  font-size: 13px;
-  line-height: 1.3;
-  color: var(--soft);
-}
-
-.cell .m {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 3px;
-  display: flex;
-  justify-content: center;
-}
-
-.mk path, .mk circle {
-  fill: none;
-  stroke: var(--ink);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.mk .plan { stroke: var(--soft); stroke-dasharray: 3.2 3.2; }
-
-.legend {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 14px;
-  font-size: 14px;
-}
-
-.legend div { display: flex; align-items: center; gap: 6px; }
-.legend b { font-weight: 700; }
-
-.plan-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 14px 0 0;
-  font-size: 15px;
-}
-
-.empty { margin: 14px 0 0; font-size: 15px; color: var(--soft); }
-
-/* ---------- 교재 진도: 도장판 ---------- */
-.book {
-  padding: 16px 0;
-  border-top: 1px solid var(--rule);
-}
-
-.book .line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.book .name { font-weight: 600; }
-.book .count { flex: none; font-size: 14px; color: var(--soft); white-space: nowrap; }
-
-.seal {
-  flex: none;
-  padding: 0 8px;
-  border: 2px solid var(--stamp);
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 700;
   line-height: 1.5;
-  color: var(--stampx);
-  transform: rotate(-6deg);
-}
-
-.stamps {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.stamp {
-  position: relative;
-  aspect-ratio: 1;
-  border: 1.5px solid var(--rule2);
-  border-radius: 50%;
-}
-
-.stamp.full { background: var(--tint); border: 2px solid var(--stamp); }
-
-.stamp.full::after {
-  content: "";
-  position: absolute;
-  left: 32%;
-  top: 20%;
-  width: 22%;
-  height: 40%;
-  border: solid var(--stampx);
-  border-width: 0 2.4px 2.4px 0;
-  transform: rotate(40deg);
-}
-
-.stamp.half {
-  border: 2px solid var(--stamp);
-  background: linear-gradient(90deg, var(--tint) 50%, transparent 50%);
-}
-
-/* ---------- 시험 ---------- */
-.test {
-  padding: 14px 0;
-  border-top: 1px solid var(--rule);
-}
-
-.test .line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.test .name { font-weight: 600; }
-.test .meta { font-size: 14px; color: var(--soft); }
-
-.test .score {
-  flex: none;
-  font-size: 26px;
-  line-height: 1.2;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.test .score small { margin-left: 2px; font-size: 15px; font-weight: 500; }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.done { background: var(--good-soft); color: var(--good); }
+.badge.bad { background: var(--bad-soft); color: var(--bad); }
 
 progress {
   display: block;
   width: 100%;
-  height: 4px;
-  margin-top: 10px;
+  height: 6px;
+  margin-top: 9px;
   border: 0;
-  border-radius: 2px;
-  background: var(--rule);
+  border-radius: 999px;
+  background: var(--border);
   overflow: hidden;
   appearance: none;
   -webkit-appearance: none;
 }
 
-progress::-webkit-progress-bar   { background: var(--rule); border-radius: 2px; }
-progress::-webkit-progress-value { background: var(--ink); border-radius: 2px; }
-progress::-moz-progress-bar      { background: var(--ink); border-radius: 2px; }
+progress::-webkit-progress-bar   { background: var(--border); border-radius: 999px; }
+progress::-webkit-progress-value { background: var(--progress); border-radius: 999px; }
+progress::-moz-progress-bar      { background: var(--progress); border-radius: 999px; }
 
-/* ---------- 월간 평가 ---------- */
-.eval + .eval { margin-top: 24px; padding-top: 22px; border-top: 2px solid var(--ink); }
+/* 출석 기호: 출석 ○ 지각 △ 결석 ✕ 보강 ◎ */
+.mk { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.mk.o, .mk.d { color: var(--accent); }
+.mk.t { color: var(--warn); }
+.mk.x { color: var(--bad); }
+.mk.p { color: var(--muted); }
 
-.eval h3 { margin: 0 0 14px; font-size: 17px; }
-
-.subhead { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--soft); }
-.subhead.gap { margin-top: 20px; }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 24px;
-}
-
-.grid .item {
+/* ---------- 위쪽 머리띠 (스크롤해도 고정) ---------- */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) var(--padr) 14px var(--padl);
+  background: var(--side-bg);
+  color: var(--side-text);
+}
+
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand img { flex: none; width: 38px; height: 38px; }
+.brand b { display: block; font-size: 1.05rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+.brand small { display: block; font-size: 0.75rem; line-height: 1.2; color: var(--side-muted); }
+
+.who { min-width: 0; text-align: right; }
+.who b { display: block; font-size: 1rem; font-weight: 700; line-height: 1.25; }
+.who small { display: block; font-size: 0.8rem; line-height: 1.25; color: var(--side-muted); }
+
+/* ---------- 아래 탭 ---------- */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0 var(--padr) env(safe-area-inset-bottom, 0px) var(--padl);
+  overflow: hidden;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.tab {
+  position: relative;
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 2px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ico {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 120ms ease-out;
+}
+
+.tab:active .ico { transform: scale(0.9); }
+
+.tab[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+
+/* 로고의 주황 책갈피가 선택한 탭 위에 걸린다 */
+.tab::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 14px;
+  height: 17px;
+  margin-left: -7px;
+  background: var(--mark);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 120ms ease-out;
+}
+
+.tab[aria-selected="true"]::before { opacity: 1; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ico, .tab::before, .past .chev { transition: none; }
+}
+
+/* ---------- 카드 ---------- */
+.card {
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.section > h2,
+.cardhead > h2 {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 1.1rem;
+  line-height: 1.3;
+  font-weight: 700;
 }
 
-.dots { display: flex; gap: 4px; }
-
-.dots i {
-  display: block;
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid var(--rule2);
-  border-radius: 50%;
+.section > h2::before,
+.cardhead > h2::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--accent);
 }
 
-.dots i.on { background: var(--ink); border-color: var(--ink); }
+.section > h2 { margin-bottom: 0.4rem; }
 
-.eval .rows { margin-top: 18px; }
-.eval .ruled { margin-top: 22px; }
+/* ---------- 최근 수업 ---------- */
+.lh { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.lh.nodate { grid-template-columns: minmax(0, 1fr); }
+
+.date {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-align: center;
+}
+
+.date small { font-size: 0.75rem; font-weight: 600; line-height: 1.2; }
+.date b { font-size: 1.6rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.date span { font-size: 0.75rem; font-weight: 600; line-height: 1.2; }
+
+.lh h2 { font-size: 1.1rem; line-height: 1.3; font-weight: 800; letter-spacing: -0.01em; }
+.lh .range { margin-top: 1px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.lh .topic { margin-top: 2px; font-size: 0.9rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* 선생님이 남긴 글 */
+.note {
+  margin-top: 14px;
+  padding: 0.65rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--panel);
+  line-height: 1.65;
+}
+
+.note strong { display: block; margin-bottom: 2px; font-size: 0.78rem; color: var(--accent); }
+.note p { white-space: pre-wrap; }
+.note .sign { margin-top: 4px; text-align: right; font-size: 0.85rem; color: var(--muted); }
+
+.kv { margin-top: 14px; border-top: 1px solid var(--border); }
+
+.kv > div {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.kv dt { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.kv dd { white-space: pre-wrap; }
+
+.next { margin-top: 12px; padding: 0.7rem 0.9rem; border-radius: var(--radius); background: var(--accent-soft); white-space: pre-wrap; }
+.next strong { display: block; margin-bottom: 0.15rem; font-size: 0.85rem; color: var(--accent); }
 
 /* ---------- 지난 수업 ---------- */
-.past { border-top: 1px solid var(--rule); }
+.past { border-top: 1px solid var(--border); }
+.past:first-of-type { margin-top: 4px; }
 
 .past > button {
   width: 100%;
-  min-height: 56px;
+  min-height: 54px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -480,55 +363,128 @@ progress::-moz-progress-bar      { background: var(--ink); border-radius: 2px; }
   cursor: pointer;
 }
 
-.past .pdate { flex: none; width: 76px; font-weight: 600; white-space: nowrap; }
-.past .pmark { flex: none; width: 22px; display: flex; justify-content: center; }
-
-.past .pwhat {
-  flex: 1;
-  min-width: 0;
-  font-size: 15px;
-  line-height: 1.45;
-  color: var(--soft);
-}
-
+.past .pdate { flex: none; width: 74px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.past .pmark { flex: none; width: 20px; display: flex; justify-content: center; }
+.past .pwhat { flex: 1; min-width: 0; font-size: 0.9rem; line-height: 1.4; color: var(--muted); }
 .past .pwhat .range { margin-left: 6px; white-space: nowrap; }
 
 .past .chev {
   flex: none;
   fill: none;
-  stroke: var(--soft);
+  stroke: var(--muted);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: transform 160ms ease-out;
 }
 
 .past > button[aria-expanded="true"] .chev { transform: rotate(180deg); }
 
-.past .detail { padding: 0 0 16px 88px; }
-.past .detail p { margin: 0 0 8px; font-size: 15px; white-space: pre-wrap; }
-.past .detail .k { display: block; font-size: 14px; font-weight: 600; color: var(--soft); }
+.past .detail { padding: 0 0 14px 86px; font-size: 0.9rem; }
+.past .detail p { white-space: pre-wrap; }
+.past .detail p + p { margin-top: 6px; }
+.past .detail .k { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 
-.more {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  margin-top: 4px;
-  border: 0;
-  border-top: 1px solid var(--rule);
-  background: transparent;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--soft);
-  cursor: pointer;
-}
+.more { display: block; width: 100%; min-height: 44px; margin-top: 8px; font-weight: 600; color: var(--muted); }
+.eval + .more { margin-top: 16px; }
 
-/* ---------- 푸터 ---------- */
 .foot {
-  margin: 28px 8px 0;
-  font-size: 13px;
+  margin: 14px 8px 0;
+  font-size: 0.8rem;
   line-height: 1.6;
   text-align: center;
-  color: var(--soft);
+  color: var(--muted);
 }
 
-[hidden] { display: none !important; }
+/* ---------- 출석 달력 ---------- */
+.cardhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.nav { display: flex; gap: 8px; }
+
+.navbtn { width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.navbtn svg { fill: none; stroke: var(--text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.navbtn:disabled { opacity: 0.35; cursor: default; }
+.navbtn:disabled:hover { border-color: var(--border); }
+
+.cal-head,
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+
+.cal-head { margin-top: 12px; text-align: center; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.cal-grid { margin-top: 4px; }
+
+.cell { position: relative; height: 50px; border-radius: 8px; }
+.cell.has { border: 1px solid var(--border); }
+.cell.today { background: var(--accent-soft); border: 2px solid var(--accent); }
+
+.cell .d { position: absolute; top: 3px; left: 6px; font-size: 0.78rem; line-height: 1.3; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cell.today .d { color: var(--accent); font-weight: 700; }
+.cell .m { position: absolute; left: 0; right: 0; bottom: 3px; display: flex; justify-content: center; }
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.legend div { display: flex; align-items: center; gap: 5px; }
+.legend b { font-variant-numeric: tabular-nums; }
+
+.plan-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.plan-line .mk { color: var(--accent); }
+
+.empty { margin-top: 12px; color: var(--muted); }
+
+/* ---------- 교재 진도 ---------- */
+.book { padding: 14px 0; border-top: 1px solid var(--border); }
+.book:first-of-type { margin-top: 4px; }
+.book .line { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.book .name { font-weight: 600; }
+.book .count { flex: none; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.segs { display: grid; gap: 4px; margin-top: 10px; }
+.segs i { display: block; height: 10px; border-radius: 3px; background: var(--border); }
+.segs i.full { background: var(--accent); }
+.segs i.half { background: linear-gradient(90deg, var(--accent) 50%, var(--border) 50%); }
+
+/* ---------- 시험 ---------- */
+.test { padding: 13px 0; border-top: 1px solid var(--border); }
+.test:first-of-type { margin-top: 4px; }
+.test .line { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.test .name { font-weight: 600; }
+.test .meta { font-size: 0.85rem; color: var(--muted); }
+.test .score { flex: none; font-size: 1.4rem; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.test .score small { margin-left: 2px; font-size: 0.85rem; font-weight: 500; color: var(--muted); }
+
+/* ---------- 월간 평가 ---------- */
+.eval + .eval { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.eval h3 { margin-bottom: 4px; font-size: 1rem; font-weight: 700; }
+
+.subhead { margin: 14px 0 8px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.eval > .subhead:first-child,
+.section > .eval > .subhead:first-child { margin-top: 6px; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 22px; }
+.grid .item { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.9rem; }
+
+.dots { display: flex; gap: 3px; }
+.dots i { display: block; width: 11px; height: 10px; border-radius: 3px; background: var(--border); }
+.dots i.on { background: var(--accent); }
+
+.tx { margin-top: 14px; padding-left: 12px; border-left: 3px solid var(--accent); }
+.tx h4 { margin-bottom: 2px; font-size: 0.9rem; font-weight: 700; color: var(--accent); }
+.tx p { line-height: 1.65; white-space: pre-wrap; }

@@ -21,19 +21,11 @@
   }
 
   var DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+  var DAYS_LONG = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
   function parseDate(s) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
     return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
-  }
-
-  function fmtDate(s) {
-    var d = parseDate(s);
-    return d ? (d.getMonth() + 1) + '/' + d.getDate() + ' (' + DAYS[d.getDay()] + ')' : '';
-  }
-
-  function fmtTime(s) {
-    return s ? String(s).slice(0, 5) : '';
   }
 
   function num(n) {
@@ -51,8 +43,6 @@
     p.value = Math.max(0, Math.min(value, p.max));
     return p;
   }
-
-  var DAYS_LONG = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
   function fmtLong(s) {
     var d = parseDate(s);
@@ -74,11 +64,8 @@
     return half + ' ' + h12 + '시' + (mm ? ' ' + mm + '분' : '');
   }
 
-  // ---------- 출석부 기호 (SVG) ----------
+  // ---------- 아이콘 · 출석 기호 (SVG) ----------
   var SVGNS = 'http://www.w3.org/2000/svg';
-  var P_O = 'M14.2 3.6c6.1-.5 10.7 4.1 10.3 10.2-.4 6.2-4.9 10.7-10.9 10.5C7.6 24.1 3.4 19.5 3.7 13.9 4 8.3 8.5 3.9 14.2 3.6z';
-  var P_T = 'M14 4.8L24.2 22.4 4.1 21.9z';
-  var P_X = 'M6.2 6.2L21.8 21.8M21.8 6.4L6.4 21.6';
   var MARKS = { '출석': 'o', '지각': 't', '결석': 'x', '보강': 'd' };
 
   function svgEl(name, attrs) {
@@ -91,22 +78,24 @@
     return svgEl('svg', { width: w, height: h2, viewBox: vb, 'aria-hidden': 'true', 'class': cls || '' });
   }
 
-  // 출석(○) 지각(△) 결석(✕) 보강(◎). 알 수 없는 값은 null.
+  // 출석(○) 지각(△) 결석(✕) 보강(◎). 색은 CSS에서 정한다. 알 수 없는 값은 null.
   function mark(att, size, sw) {
     var kind = MARKS[att];
     if (!kind) return null;
-    var s = svg(size, size, '0 0 28 28', 'mk');
-    var a = function (d) { return svgEl('path', { d: d, 'stroke-width': sw }); };
-    if (kind === 'o' || kind === 'd') s.appendChild(a(P_O));
-    if (kind === 't') s.appendChild(a(P_T));
-    if (kind === 'x') s.appendChild(a(P_X));
-    if (kind === 'd') s.appendChild(svgEl('circle', { cx: 14, cy: 14, r: 4.6, 'stroke-width': sw - 0.2 }));
+    var s = svg(size, size, '0 0 24 24', 'mk ' + kind);
+    if (kind === 'o') s.appendChild(svgEl('circle', { cx: 12, cy: 12, r: 7.6, 'stroke-width': sw }));
+    if (kind === 'd') {
+      s.appendChild(svgEl('circle', { cx: 12, cy: 12, r: 8.2, 'stroke-width': sw }));
+      s.appendChild(svgEl('circle', { cx: 12, cy: 12, r: 3.6, 'stroke-width': sw }));
+    }
+    if (kind === 't') s.appendChild(svgEl('path', { d: 'M12 4.6L20.2 19H3.8z', 'stroke-width': sw }));
+    if (kind === 'x') s.appendChild(svgEl('path', { d: 'M6 6l12 12M18 6L6 18', 'stroke-width': sw }));
     return s;
   }
 
   function planMark(size) {
-    var s = svg(size, size, '0 0 28 28', 'mk');
-    s.appendChild(svgEl('circle', { cx: 14, cy: 14, r: 9.5, 'stroke-width': 2, 'class': 'plan' }));
+    var s = svg(size, size, '0 0 24 24', 'mk p');
+    s.appendChild(svgEl('circle', { cx: 12, cy: 12, r: 7.6, 'stroke-width': 2, 'stroke-dasharray': '3.4 3.4' }));
     return s;
   }
 
@@ -116,25 +105,26 @@
     return s;
   }
 
-  function highlight(text) {
-    var p = h('p');
-    p.appendChild(h('span', 'mark', text.trim()));
-    return p;
+  // 출결 배지: 출석은 기본색, 지각은 주황, 결석은 빨강
+  function attBadge(att) {
+    var cls = 'badge';
+    if (att === '지각') cls += ' warn';
+    if (att === '결석') cls += ' bad';
+    return h('span', cls, att);
   }
 
-  function row2(label, content) {
-    var r = h('div', 'row2');
-    add(r, h('div', 'k', label), content);
+  // 선생님이 남긴 글 블록 (왼쪽 선 + 연한 바탕)
+  function note(label, text, signed) {
+    var n = h('div', 'note');
+    add(n, h('strong', '', label), h('p', '', text.trim()));
+    if (signed) n.appendChild(h('p', 'sign', 'Rachel 선생님'));
+    return n;
+  }
+
+  function kvRow(label, text) {
+    var r = h('div');
+    add(r, h('dt', '', label), add(h('dd'), h('span', '', text.trim())));
     return r;
-  }
-
-  // 줄 노트에 쓴 글. 짧으면 손글씨체, 길면 읽기 쉬운 본문체.
-  function ruled(lines, signed) {
-    var total = lines.join('').length;
-    var d = h('div', 'ruled' + (total > 90 ? ' long' : ''));
-    lines.forEach(function (t) { d.appendChild(h('p', '', t.trim())); });
-    if (signed) d.appendChild(h('p', 'sign', 'Rachel 선생님'));
-    return d;
   }
 
   // 교재 이름으로 단원 단위(단원/Unit 등)를 찾는다.
@@ -151,65 +141,71 @@
   }
 
   // ---------- 화면 조각 ----------
-  function renderHeader(data) {
+  // 위쪽에 고정되는 청록 머리띠. 어느 탭에서나 로고와 학생 이름이 보인다.
+  function renderTop(data) {
     var name = (data.student && data.student.name) || '';
     var grade = data.student && data.student.grade;
-    var f = document.createDocumentFragment();
-    add(f,
-      h('p', 'brand', 'Rachel English'),
-      h('h1', 'title', name + ' 학생의 학습 현황'),
-      has(grade) ? h('p', 'grade', grade) : null);
-    return f;
+
+    var logo = h('img');
+    logo.src = 'icons/logo-dark.svg';
+    logo.alt = '';
+    logo.width = 38;
+    logo.height = 38;
+    var title = h('div');
+    add(title, h('b', '', 'Rachel English'), h('small', '', '학습 현황'));
+
+    var who = h('p', 'who');
+    add(who, h('b', '', name + ' 학생'), has(grade) ? h('small', '', grade) : null);
+
+    return add(h('header', 'top'),
+      h('h1', 'sr', name + ' 학생의 학습 현황'),
+      add(h('div', 'brand'), logo, title),
+      who);
   }
 
   function renderLatest(data) {
     var l = (data.lessons || [])[0];
     if (!l) return null;
-    var sec = h('section', 'latest');
-    var head = h('div', 'latest-head');
-    var left = h('div');
-    left.appendChild(h('h2', '', fmtLong(l.date) + ' 수업'));
-    if (l.homework) {
-      var hw = h('p', 'hwline');
-      if (l.homework === '완료') {
-        var ck = svg(16, 16, '0 0 16 16', 'mk');
-        ck.appendChild(svgEl('path', { d: 'M3.2 8.6l3.1 3.1 6.5-7.4', 'stroke-width': 2.2 }));
-        hw.appendChild(ck);
-      }
-      hw.appendChild(h('span', '', '숙제 ' + l.homework));
-      left.appendChild(hw);
-    }
-    head.appendChild(left);
+    var sec = h('section', 'section');
+    var d = parseDate(l.date);
+    var head = h('div', 'lh' + (d ? '' : ' nodate'));
 
-    if (l.attendance) {
-      var circ = h('div', 'circled');
-      var s = svg(64, 40, '0 0 64 40', 'mk');
-      s.appendChild(svgEl('path', {
-        d: 'M32 3.5C48 2.8 60.5 9.6 60.2 20.4 59.9 31 47.5 37.4 31.6 36.8 15.6 36.2 3.6 30 3.9 19.6 4.2 9.4 16.4 4.1 32 3.5z',
-        'stroke-width': 2.4
-      }));
-      add(circ, s, h('span', '', l.attendance));
-      head.appendChild(circ);
+    if (d) {
+      var tile = h('div', 'date');
+      tile.setAttribute('aria-hidden', 'true');
+      add(tile, h('small', '', (d.getMonth() + 1) + '월'), h('b', '', d.getDate()), h('span', '', DAYS_LONG[d.getDay()]));
+      head.appendChild(tile);
     }
+
+    var info = h('div');
+    var title = h('h2');
+    if (has(l.textbook)) {
+      add(title, h('span', 'sr', fmtLong(l.date) + ' 수업, '), document.createTextNode(l.textbook.trim()));
+    } else {
+      title.textContent = fmtLong(l.date) + ' 수업';
+    }
+    info.appendChild(title);
+    var rg = has(l.textbook) ? rangeText(l, unitLabelFor(data, l.textbook)) : '';
+    if (rg) info.appendChild(h('p', 'range', rg));
+    if (has(l.topic)) info.appendChild(h('p', 'topic', l.topic));
+
+    var chips = h('div', 'chips');
+    if (l.attendance) chips.appendChild(attBadge(l.attendance));
+    if (l.homework) chips.appendChild(h('span', 'badge' + (l.homework === '완료' ? ' done' : ''), '숙제 ' + l.homework));
+    if (chips.childNodes.length) info.appendChild(chips);
+    head.appendChild(info);
     sec.appendChild(head);
 
-    if (has(l.textbook) || has(l.topic)) {
-      if (has(l.textbook)) {
-        var what = h('p', 'what');
-        what.appendChild(h('b', '', l.textbook));
-        var rg = rangeText(l, unitLabelFor(data, l.textbook));
-        if (rg) what.appendChild(h('span', 'range', rg));
-        sec.appendChild(what);
-      }
-      if (has(l.topic)) sec.appendChild(h('p', 'topic', l.topic));
+    if (has(l.teacher_comment)) sec.appendChild(note('선생님 코멘트', l.teacher_comment, true));
+
+    if (has(l.homework_note)) {
+      var kv = h('dl', 'kv');
+      kv.appendChild(kvRow('숙제', l.homework_note));
+      sec.appendChild(kv);
     }
-
-    if (has(l.teacher_comment)) sec.appendChild(ruled([l.teacher_comment], true));
-
-    var rows = h('div', 'rows');
-    if (has(l.homework_note)) rows.appendChild(row2('숙제', highlight(l.homework_note)));
-    if (has(l.next_plan)) rows.appendChild(row2('다음 수업', highlight(l.next_plan)));
-    if (rows.childNodes.length) sec.appendChild(rows);
+    if (has(l.next_plan)) {
+      sec.appendChild(add(h('div', 'next'), h('strong', '', '다음 수업'), h('span', '', l.next_plan.trim())));
+    }
     return sec;
   }
 
@@ -249,8 +245,8 @@
     var head = h('div', 'cardhead');
     var title = h('h2');
     var nav = h('div', 'nav');
-    var prev = h('button', 'navbtn');
-    var next = h('button', 'navbtn');
+    var prev = h('button', 'btn navbtn');
+    var next = h('button', 'btn navbtn');
     prev.type = 'button';
     next.type = 'button';
     prev.setAttribute('aria-label', '이전 달');
@@ -294,7 +290,7 @@
         cell.appendChild(h('span', 'd', d));
         if (att || isPlan) {
           var m = h('div', 'm');
-          var icon = att ? mark(att, 28, 2.4) : planMark(28);
+          var icon = att ? mark(att, 26, 2.4) : planMark(26);
           if (icon) m.appendChild(icon);
           cell.appendChild(m);
           cell.appendChild(h('span', 'sr', cur.month + '월 ' + d + '일 ' + (att || '보강 예정')));
@@ -305,7 +301,7 @@
 
       ['출석', '지각', '결석', '보강'].forEach(function (k) {
         var item = h('div');
-        add(item, mark(k, 18, 3), h('span', '', k), h('b', '', counts[k]));
+        add(item, mark(k, 18, 2.6), h('span', '', k), h('b', '', counts[k]));
         legend.appendChild(item);
       });
 
@@ -329,7 +325,7 @@
     return sec;
   }
 
-  // 교재 진도: 단원 수가 적당하면 도장판, 너무 많으면 막대
+  // 교재 진도: 단원 수가 적당하면 칸 채우기, 너무 많으면 막대
   function renderProgress(list) {
     if (!list || !list.length) return null;
     var sec = h('section', 'section');
@@ -342,20 +338,21 @@
       var b = h('div', 'book');
       var line = h('div', 'line');
       line.appendChild(h('span', 'name', p.textbook));
-      if (done) line.appendChild(h('span', 'seal', '완료'));
+      if (done) line.appendChild(h('span', 'badge done', '완료'));
       else line.appendChild(h('span', 'count', num(cur) + ' / ' + num(tot) + ' ' + label));
       b.appendChild(line);
 
       if (!done && tot > 0) {
         if (tot <= 60) {
-          var st = h('div', 'stamps');
+          var st = h('div', 'segs');
+          st.style.gridTemplateColumns = 'repeat(' + (tot <= 12 ? Math.ceil(tot) : 10) + ', minmax(0, 1fr))';
           st.setAttribute('role', 'img');
           st.setAttribute('aria-label', num(tot) + ' ' + label + ' 중 ' + num(cur) + ' ' + label + ' 진행');
           for (var i = 0; i < Math.ceil(tot); i++) {
-            var cls = 'stamp';
-            if (cur >= i + 1) cls += ' full';
-            else if (cur > i) cls += ' half';
-            st.appendChild(h('div', cls));
+            var cls = '';
+            if (cur >= i + 1) cls = 'full';
+            else if (cur > i) cls = 'half';
+            st.appendChild(h('i', cls));
           }
           b.appendChild(st);
         } else {
@@ -429,16 +426,14 @@
     var ratings = scoreGrid(e.ratings, RATING_LABELS);
     var attitude = scoreGrid(e.attitude, ATTITUDE_LABELS);
     if (ratings) add(item, h('p', 'subhead', '영역별 성취'), ratings);
-    if (attitude) add(item, h('p', 'subhead gap', '수업 태도'), attitude);
+    if (attitude) add(item, h('p', 'subhead', '수업 태도'), attitude);
 
-    var rows = h('div', 'rows');
     [['잘하고 있는 점', e.achievement], ['더 보완할 점', e.improvement], ['다음 달 계획', e.next_plan]]
       .forEach(function (p) {
-        if (has(p[1])) rows.appendChild(row2(p[0], h('p', '', p[1].trim())));
+        if (has(p[1])) item.appendChild(add(h('div', 'tx'), h('h4', '', p[0]), h('p', '', p[1].trim())));
       });
-    if (rows.childNodes.length) item.appendChild(rows);
 
-    if (has(e.parent_note)) item.appendChild(ruled(['학부모님께,', e.parent_note], true));
+    if (has(e.parent_note)) item.appendChild(note('학부모님께', e.parent_note, true));
     return item;
   }
 
@@ -451,7 +446,7 @@
       var olds = h('div');
       olds.hidden = true;
       list.slice(1).forEach(function (e) { olds.appendChild(evalItem(e)); });
-      var btn = h('button', 'more', '이전 평가 보기');
+      var btn = h('button', 'btn more', '이전 평가 보기');
       btn.type = 'button';
       btn.setAttribute('aria-expanded', 'false');
       btn.addEventListener('click', function () {
@@ -476,7 +471,7 @@
     if (rg) what.appendChild(h('span', 'range', rg));
     if (!has(l.textbook) && has(l.topic)) what.appendChild(h('span', '', l.topic));
     var pm = h('span', 'pmark');
-    var icon = mark(l.attendance, 22, 2.6);
+    var icon = mark(l.attendance, 20, 2.4);
     if (icon) pm.appendChild(icon);
     else if (l.attendance) pm.appendChild(h('span', 'sr', l.attendance));
     if (icon) pm.appendChild(h('span', 'sr', l.attendance));
@@ -518,7 +513,7 @@
       var rest = h('div');
       rest.hidden = true;
       list.slice(FIRST).forEach(function (l) { rest.appendChild(pastItem(data, l)); });
-      var btn = h('button', 'more', '이전 수업 ' + (list.length - FIRST) + '개 더 보기');
+      var btn = h('button', 'btn more', '이전 수업 ' + (list.length - FIRST) + '개 더 보기');
       btn.type = 'button';
       btn.setAttribute('aria-expanded', 'false');
       btn.addEventListener('click', function () {
@@ -530,39 +525,114 @@
     return sec;
   }
 
+  // ---------- 탭 ----------
+  // 아이콘은 24x24 안에 그린 선 아이콘.
+  var TABS = [
+    {
+      id: 'lesson', label: '수업',
+      icon: 'M3 5.5c3-1 6-.8 9 1v12.5c-3-1.8-6-2-9-1z M21 5.5c-3-1-6-.8-9 1v12.5c3-1.8 6-2 9-1z',
+      empty: '수업 기록이 쌓이면 이곳에 표시됩니다.',
+      build: function (data) { return [renderLatest(data), renderPast(data)]; }
+    },
+    {
+      id: 'attend', label: '출석',
+      icon: 'M5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-12A1.5 1.5 0 0 1 5.5 5z M4 9.5h16M8 3v4M16 3v4M9 14.5l2 2 4-4',
+      empty: '출석 기록이 쌓이면 이곳에 표시됩니다.',
+      build: function (data) { return [renderAttendance(data)]; }
+    },
+    {
+      id: 'progress', label: '진도·시험',
+      icon: 'M5 20v-8M12 20V5M19 20v-5',
+      empty: '교재 진도와 시험 결과가 쌓이면 이곳에 표시됩니다.',
+      build: function (data) { return [renderProgress(data.progress), renderTests(data.tests)]; }
+    },
+    {
+      id: 'eval', label: '평가',
+      icon: 'M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z',
+      empty: '월간 평가가 등록되면 이곳에 표시됩니다.',
+      build: function (data) { return [renderEvaluations(data.evaluations)]; }
+    }
+  ];
+
+  var currentTab = TABS[0].id;
+
+  function tabIcon(d) {
+    var s = svg(24, 24, '0 0 24 24', 'ico');
+    s.appendChild(svgEl('path', { d: d }));
+    return s;
+  }
+
   function render(data) {
     root.textContent = '';
-    var sheet = h('div', 'sheet');
-    sheet.appendChild(renderHeader(data));
-    add(sheet,
-      renderLatest(data),
-      renderAttendance(data),
-      renderProgress(data.progress),
-      renderTests(data.tests),
-      renderEvaluations(data.evaluations),
-      renderPast(data));
+    root.removeAttribute('aria-live');
 
-    var hasAny = ['progress', 'lessons', 'tests', 'evaluations'].some(function (k) {
-      return data[k] && data[k].length;
+    var panel = h('div', 'panel');
+    panel.id = 'panel';
+    panel.setAttribute('role', 'tabpanel');
+    panel.tabIndex = 0;
+
+    var bar = h('nav', 'tabbar');
+    bar.setAttribute('role', 'tablist');
+    bar.setAttribute('aria-label', '학습 현황 구역');
+
+    var buttons = TABS.map(function (t) {
+      var b = h('button', 'tab');
+      b.type = 'button';
+      b.id = 'tab-' + t.id;
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-controls', 'panel');
+      add(b, tabIcon(t.icon), h('span', '', t.label));
+      b.addEventListener('click', function () { show(t.id, true); });
+      bar.appendChild(b);
+      return b;
     });
-    if (!hasAny) {
-      var empty = h('section', 'section');
-      add(empty, h('h2', '', '아직 기록이 없어요'), h('p', 'empty', '수업 기록이 쌓이면 이곳에 표시됩니다.'));
-      sheet.appendChild(empty);
+
+    function show(id, toTop) {
+      currentTab = id;
+      var tab = TABS.filter(function (t) { return t.id === id; })[0];
+      panel.textContent = '';
+      var sections = tab.build(data).filter(Boolean);
+      if (sections.length) {
+        sections.forEach(function (s) { panel.appendChild(add(h('div', 'card'), s)); });
+      } else {
+        var empty = h('section', 'section');
+        add(empty, h('h2', '', '아직 기록이 없어요'), h('p', 'empty', tab.empty));
+        panel.appendChild(add(h('div', 'card'), empty));
+      }
+      if (id === 'lesson') {
+        panel.appendChild(h('p', 'foot',
+          '학생 전용 링크입니다. 다른 사람에게 전달하지 말아 주세요. 궁금한 점은 선생님께 문의해 주세요.'));
+      }
+      panel.setAttribute('aria-labelledby', 'tab-' + id);
+      buttons.forEach(function (b, i) {
+        var on = TABS[i].id === id;
+        b.setAttribute('aria-selected', String(on));
+        b.tabIndex = on ? 0 : -1;
+      });
+      if (toTop) window.scrollTo(0, 0);
     }
 
-    sheet.appendChild(h('p', 'foot',
-      '학생 전용 링크입니다. 다른 사람에게 전달하지 말아 주세요. 궁금한 점은 선생님께 문의해 주세요.'));
-    root.appendChild(sheet);
+    // 좌우 화살표로 탭 이동
+    bar.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var at = TABS.map(function (t) { return t.id; }).indexOf(currentTab);
+      var next = (at + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length;
+      show(TABS[next].id, true);
+      buttons[next].focus();
+    });
+
+    add(root, renderTop(data), panel, bar);
+    show(currentTab, false);
   }
 
   // ---------- 상태 화면 ----------
   function showMessage(title, body, retry) {
     root.textContent = '';
+    root.setAttribute('aria-live', 'polite');
     var p = h('p', 'status');
     add(p, h('strong', '', title), document.createTextNode(body));
     if (retry) {
-      var b = h('button', 'btn', '다시 시도');
+      var b = h('button', 'btn primary', '다시 시도');
       b.type = 'button';
       b.addEventListener('click', retry);
       p.appendChild(document.createElement('br'));
@@ -585,6 +655,7 @@
     }
 
     root.textContent = '';
+    root.setAttribute('aria-live', 'polite');
     root.appendChild(h('p', 'status', '불러오는 중…'));
 
     fetch(cfg.supabaseUrl + '/rest/v1/rpc/get_parent_view', {
