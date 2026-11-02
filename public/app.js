@@ -389,6 +389,91 @@
     return sec;
   }
 
+  // 시험 점수 추이: 종류·단위·만점이 같은 시험을 2번 이상 봤을 때 꺾은선으로 보여 준다.
+  // 세로 눈금은 실제 점수로 적고, 점수가 몰려 있으면 아래쪽을 잘라서 변화가 보이게 한다.
+  function trendChart(g) {
+    var pts = g.pts.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).slice(-8);
+    var n = pts.length;
+    var W = 320, H = 156, L = 34, R = 16, T = 24, B = 26;
+    var plotW = W - L - R, plotH = H - T - B;
+    var minPct = 100;
+    pts.forEach(function (p) { minPct = Math.min(minPct, p.score / g.max * 100); });
+    var lo = Math.max(0, Math.floor((minPct - 10) / 10) * 10);
+
+    function X(i) { return L + 14 + (plotW - 28) * i / (n - 1); }
+    function Y(score) {
+      var pct = Math.max(lo, Math.min(100, score / g.max * 100));
+      return T + plotH * (1 - (pct - lo) / (100 - lo));
+    }
+    function md(s) { var d = parseDate(s); return (d.getMonth() + 1) + '/' + d.getDate(); }
+
+    var s = svg(W, H, '0 0 ' + W + ' ' + H, 'trendsvg');
+    s.removeAttribute('width');
+    s.removeAttribute('height');
+    s.setAttribute('role', 'img');
+    s.removeAttribute('aria-hidden');
+    s.setAttribute('aria-label', g.kind + ' 점수 추이: ' + pts.map(function (p) { return md(p.date) + ' ' + num(p.score) + g.unit; }).join(', '));
+
+    [lo, (lo + 100) / 2, 100].forEach(function (pct) {
+      var y = T + plotH * (1 - (pct - lo) / (100 - lo));
+      s.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y, y2: y, 'class': 'tr-grid' }));
+      var t = svgEl('text', { x: L - 6, y: y + 3.5, 'text-anchor': 'end', 'class': 'tr-axis' });
+      t.textContent = num(pct * g.max / 100);
+      s.appendChild(t);
+    });
+
+    var line = '';
+    pts.forEach(function (p, i) { line += (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.score).toFixed(1); });
+    s.appendChild(svgEl('path', { d: line + 'L' + X(n - 1).toFixed(1) + ' ' + (T + plotH) + 'L' + X(0).toFixed(1) + ' ' + (T + plotH) + 'z', 'class': 'tr-area' }));
+    s.appendChild(svgEl('path', { d: line, 'class': 'tr-line' }));
+
+    pts.forEach(function (p, i) {
+      var last = i === n - 1;
+      s.appendChild(svgEl('circle', { cx: X(i), cy: Y(p.score), r: last ? 5 : 3.5, 'class': 'tr-dot' }));
+      if (n <= 6 || i === 0 || last) {
+        var v = svgEl('text', { x: X(i), y: Y(p.score) - 9, 'text-anchor': 'middle', 'class': 'tr-val' });
+        v.textContent = num(p.score);
+        s.appendChild(v);
+      }
+      if (n <= 5 || i === 0 || last || (i % 2 === 0 && i < n - 2)) {
+        var x = svgEl('text', { x: X(i), y: H - 8, 'text-anchor': 'middle', 'class': 'tr-axis' });
+        x.textContent = md(p.date);
+        s.appendChild(x);
+      }
+    });
+
+    var wrap = h('div', 'trend');
+    var head = h('div', 'trend-head');
+    head.appendChild(h('span', 'name', g.kind + (g.unit !== '점' ? ' (' + g.unit + ')' : '')));
+    var diff = pts[n - 1].score - pts[n - 2].score;
+    if (diff > 0) head.appendChild(h('span', 'badge done', '지난 시험보다 ' + num(diff) + g.unit + ' 올랐어요'));
+    else if (diff < 0) head.appendChild(h('span', 'badge', '지난 시험보다 ' + num(-diff) + g.unit + ' 낮아요'));
+    else head.appendChild(h('span', 'badge', '지난 시험과 같아요'));
+    return add(wrap, head, s);
+  }
+
+  function renderTrend(list) {
+    if (!list || !list.length) return null;
+    var groups = {};
+    list.forEach(function (t) {
+      var score = Number(t.score);
+      var max = Number(t.max_score);
+      if (!isFinite(score) || !(max > 0) || !parseDate(t.date)) return;
+      var unit = has(t.unit) ? t.unit : '점';
+      var kind = has(t.kind) ? t.kind : '시험';
+      var key = kind + '|' + unit + '|' + max;
+      if (!groups[key]) groups[key] = { kind: kind, unit: unit, max: max, pts: [] };
+      groups[key].pts.push({ date: t.date, score: score });
+    });
+    var charts = Object.keys(groups).map(function (k) { return groups[k]; })
+      .filter(function (g) { return g.pts.length >= 2; });
+    if (!charts.length) return null;
+    var sec = h('section', 'section');
+    sec.appendChild(h('h2', '', '점수 추이'));
+    charts.forEach(function (g) { sec.appendChild(trendChart(g)); });
+    return sec;
+  }
+
   var RATING_LABELS = [
     ['listening', '듣기'], ['speaking', '말하기'], ['reading', '읽기'],
     ['writing', '쓰기'], ['vocab', '어휘'], ['grammar', '문법']
@@ -544,7 +629,7 @@
       id: 'progress', label: '진도·시험',
       icon: 'M5 20v-8M12 20V5M19 20v-5',
       empty: '교재 진도와 시험 결과가 쌓이면 이곳에 표시됩니다.',
-      build: function (data) { return [renderProgress(data.progress), renderTests(data.tests)]; }
+      build: function (data) { return [renderProgress(data.progress), renderTrend(data.tests), renderTests(data.tests)]; }
     },
     {
       id: 'eval', label: '평가',
